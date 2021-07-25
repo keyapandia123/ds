@@ -4,9 +4,10 @@ My solutions to problems posted on aicrowd, kaggle, and analysis done on UCI dat
 * [Predict](https://www.kaggle.com/c/predict-volcanic-eruptions-ingv-oe) time to eruption of volcanoes based on sensor signal data
 * [Classify](https://archive.ics.uci.edu/ml/datasets/human+activity+recognition+using+smartphones#) activity of person wearing wearable IMU as walking, walking upstairs, walking
 downstairs, sitting, standing, or laying
+* [Predict](https://archive.ics.uci.edu/ml/datasets/PPG-DaLiA) heart rate under conditions of free living from a PPG sensor signal
 
 Used time domain signal representations of the sensor signals as inputs to 1D convolutional and
-bidirectional LSTM layers, and provided [frequency domain representations](https://github.com/keyapandia123/ds/blob/main/volcano/ingv.ipynb) (2D spectrograms) and [wavelet spectra](https://github.com/keyapandia123/ds/blob/main/activity_recog/activity_recog.ipynb) of the sensor signals as input to 2D convolutional layers . Placed 5th out of 620 teams on the volcanic prediction competition
+bidirectional LSTM layers, and provided [frequency domain representations](https://github.com/keyapandia123/ds/blob/main/volcano/ingv.ipynb) (2D spectrograms) and [wavelet spectra](https://github.com/keyapandia123/ds/blob/main/activity_recog/activity_recog.ipynb) of the sensor signals as input to 2D convolutional layers. Aligned and [synchronized](https://github.com/keyapandia123/ds/blob/main/ppg/ppg_dalia.ipynb) signals from different sensors. Placed 5th out of 620 teams on the volcanic prediction competition
 
 ## Computer Vision (Classification)
 * [Given](https://www.aicrowd.com/challenges/ai-blitz-6) an image of a chess board, predict piece count, points, board configuration, and side likely to win. Given a video sequence of a game, identify the moves being made
