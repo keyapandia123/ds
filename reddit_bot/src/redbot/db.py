@@ -123,7 +123,6 @@ def update_score(con, new_score, uid):
     cursor.execute(sql, (new_score, uid))
 
 
-
 def insert_new_post(con, post, high_rank):
     """Insert a new post entry into the database.
 
@@ -141,9 +140,9 @@ def insert_new_post(con, post, high_rank):
     """
     cursor.execute(
         sql,
-       (post.id,
-        post.url,
-        post.title,
-        post.score,
-        high_rank)
+        (post.id,
+         post.url,
+         post.title,
+         post.score,
+         high_rank)
     )
