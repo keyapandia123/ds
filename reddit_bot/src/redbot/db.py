@@ -3,9 +3,6 @@ import os
 import sqlite3
 
 
-DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
-
-
 class DatabaseNotFoundError(Exception):
     """Raised when database is not found."""
 
@@ -72,7 +69,7 @@ def get_uids(con):
     SELECT uid FROM posts
     """
     uid_gen = cursor.execute(sql)
-    return list(uid_gen)
+    return [elem[0] for elem in uid_gen]
 
 
 def get_highrank(con, uid):

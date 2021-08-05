@@ -58,7 +58,7 @@ def test_db_insertion_and_update():
 
         list_uids = db.get_uids(con)
         assert len(list_uids) == 1
-        assert list_uids[0][0] == 'uid'
+        assert list_uids[0] == 'uid'
 
         current_high_rank = db.get_highrank(con, 'uid')
         assert current_high_rank[0] == 4
