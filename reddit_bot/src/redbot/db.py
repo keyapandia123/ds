@@ -1,4 +1,5 @@
 """Module to handle database operations."""
+from datetime import datetime
 import os
 import sqlite3
 
@@ -20,8 +21,13 @@ def create_schema(con):
             uid TEXT, 
             url TEXT, 
             title TEXT, 
-            score INTEGER, 
-            highrank24 INTEGER
+            score INTEGER,
+            upvote_ratio FLOAT,
+            highrank24 INTEGER,
+            created_utc TIMESTAMP,
+            time_highrank TIMESTAMP, 
+            subreddit TEXT, 
+            prediction INTEGER
             )
         """)
     con.commit()
@@ -49,9 +55,9 @@ def connect_to_db(db_path, create_if_empty=False):
         raise DatabaseNotFoundError(msg)
 
     if not os.path.exists(db_path):
-        con = sqlite3.connect(db_path)
+        con = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
         create_schema(con)
-    con = sqlite3.connect(db_path)
+    con = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
     return con
 
 
@@ -105,6 +111,22 @@ def update_highrank(con, new_high_rank, uid):
     cursor.execute(sql, (new_high_rank, uid))
 
 
+def update_time_highrank(con, new_time_highrank, uid):
+    """Update time of the highest rank of a specified post in the database.
+
+    Args:
+        con: database connection
+        new_time_highrank: datetime. The time corresponding to the highest updated high rank for the specified post.
+        uid: str. The post id obtained from PRAW.
+    """
+    cursor = con.cursor()
+    sql = """
+    UPDATE posts SET time_highrank=? WHERE uid=?
+    """
+    cursor.execute(sql, (new_time_highrank, uid))
+
+
+
 def update_score(con, new_score, uid):
     """Update the score of a specified post in the database.
 
@@ -120,7 +142,7 @@ def update_score(con, new_score, uid):
     cursor.execute(sql, (new_score, uid))
 
 
-def insert_new_post(con, post, high_rank):
+def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
     """Insert a new post entry into the database.
 
     Create new entry with uid, url, title, score, and highrank24 corresponding to the new post.
@@ -132,8 +154,8 @@ def insert_new_post(con, post, high_rank):
     """
     cursor = con.cursor()
     sql = """
-    INSERT INTO posts(uid, url, title, score, highrank24) 
-    VALUES(?, ?, ?, ?, ?)
+    INSERT INTO posts(uid, url, title, score, upvote_ratio, highrank24, created_utc, time_highrank, subreddit, prediction) 
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     cursor.execute(
         sql,
@@ -141,5 +163,10 @@ def insert_new_post(con, post, high_rank):
          post.url,
          post.title,
          post.score,
-         high_rank)
+         post.upvote_ratio,
+         high_rank,
+         datetime.utcfromtimestamp(post.created_utc),
+         time_highrank,
+         subreddit,
+         prediction)
     )

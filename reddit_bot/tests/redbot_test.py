@@ -1,7 +1,9 @@
 """Basic unit tests."""
 import collections
+from datetime import datetime
 import os
 import tempfile
+import time
 
 import pandas as pd  # TODO: Remove this dependency
 import pytest
@@ -12,7 +14,7 @@ from redbot import db
 
 # TODO: Move to db module.
 Post = collections.namedtuple(
-    'Post', ['id', 'url', 'title', 'score']
+    'Post', ['id', 'url', 'title', 'score', 'upvote_ratio', 'created_utc']
 )
 
 
@@ -31,8 +33,13 @@ def test_db_creation():
         sql = """
         SELECT name FROM PRAGMA_TABLE_INFO('posts')
         """
-        ll = cursor.execute(sql)
-        assert len(list(ll)) > 0
+        ll = list(cursor.execute(sql))
+        true_cols = ['id', 'uid', 'url', 'title', 'score', 'upvote_ratio',
+                     'highrank24', 'created_utc', 'time_highrank', 'subreddit',
+                     'prediction']
+        assert len(ll) == len(true_cols)
+        for c1, c2 in zip(ll, true_cols):
+            assert c1[0] == c2
 
 
 def test_db_creation_exception():
@@ -46,15 +53,27 @@ def test_db_insertion_and_update():
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = os.path.join(temp_dir, 'temp_db.sqlite')
         con = db.connect_to_db(temp_path, create_if_empty=True)
-        new_post = Post('uid', 'url', 'title', 5)
+        current_time = time.time()
+        current_time_utc = datetime.utcfromtimestamp(current_time)
+        new_post = Post('uid', 'url', 'title', 5, 0.9, current_time)
         high_rank = 4
-        db.insert_new_post(con, new_post, high_rank)
-        saved_post = pd.read_sql_query('''SELECT * FROM posts''', con)
-        assert saved_post.loc[0]['uid'] == 'uid'
-        assert saved_post.loc[0]['url'] == 'url'
-        assert saved_post.loc[0]['title'] == 'title'
-        assert saved_post.loc[0]['score'] == 5
-        assert saved_post.loc[0]['highrank24'] == 4
+        time_highrank = current_time_utc
+        subreddit = 'politics'
+        prediction = None
+        db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction)
+        saved_post = con.cursor().execute("select * from posts").fetchall()
+        assert len(saved_post) == 1
+        saved_post = saved_post[0]
+        assert saved_post[1] == 'uid'
+        assert saved_post[2] == 'url'
+        assert saved_post[3] == 'title'
+        assert saved_post[4] == 5
+        assert saved_post[5] == 0.9
+        assert saved_post[6] == 4
+        assert saved_post[7] == current_time_utc
+        assert saved_post[8] == current_time_utc
+        assert saved_post[9] == 'politics'
+        assert saved_post[10] is None
 
         list_uids = db.get_uids(con)
         assert len(list_uids) == 1

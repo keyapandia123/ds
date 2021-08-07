@@ -20,5 +20,3 @@ def load_credentials(file_path=None):
     file_path = os.path.expanduser(file_path)
     with open(file_path) as fid:
         return json.load(fid)
-
-
