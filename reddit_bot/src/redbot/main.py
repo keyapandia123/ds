@@ -16,6 +16,19 @@ SLEEP_S = 60
 
 
 def ingest_new_posts(limit, sub_name):
+    """Add new posts to the database as they are created in Reddit.
+
+    Ingest predefined number of new posts from the specified subreddit.
+    As a new post gets created (the new post is not already present in
+    the database), insert its uid, url, title, score, upvote_ratio,
+    time of creation, and subreddit into the posts table of the database.
+    If a post exists in the table, update its score (upvotes minus downvotes)
+    within 1 hour of its creation.
+
+    Args:
+        limit: int. predefined number of new posts to ingest everytime this function is called
+        sub_name: str. name of subreddit from which to ingest new posts
+    """
     subreddit = REDDIT.subreddit(sub_name)
     posts = subreddit.new(limit=limit)
     con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=True)
@@ -40,6 +53,21 @@ def ingest_new_posts(limit, sub_name):
 
 
 def check_hot_posts(limit, sub_name):
+    """Compare ingested posts against top hot posts in Reddit.
+
+    Check if posts ingested into the table have appeared among a predefined number of
+    the top hot posts in Reddit.
+    Fetch a predefined number of top hot posts from Reddit and check
+    which of those hot posts were present in the posts table within 24 hrs
+    of the posts' creation.
+    If a post present in the posts table appeared in the top hot posts
+    within 24 hrs of the post's creation, update its high rank (its rank among the top hot posts)
+    and time corresponding to the high rank for that post.
+
+    Args:
+        limit: int. predefined number of top hot posts to fetch from Reddit.
+        sub_name: str. Subbreddit from which to fetch hot posts.
+    """
     subreddit = REDDIT.subreddit(sub_name)
     posts = subreddit.hot(limit=limit)
     con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=True)
@@ -61,6 +89,12 @@ def check_hot_posts(limit, sub_name):
 
 
 def main():
+    """Main function loop.
+
+    Continually ingest new posts from a specified subreddit
+    and check if any of the new ingested posts are present in the top
+    hot posts for that subreddit within 24 hours of the post's creation.
+    """
     while True:
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
         time.sleep(1)
