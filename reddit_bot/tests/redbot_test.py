@@ -5,7 +5,6 @@ import os
 import tempfile
 import time
 
-import pandas as pd  # TODO: Remove this dependency
 import pytest
 
 from redbot import credentials
