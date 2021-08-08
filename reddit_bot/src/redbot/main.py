@@ -63,9 +63,13 @@ def check_hot_posts(limit, sub_name):
 def main():
     while True:
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
+        time.sleep(1)
         check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
         time.sleep(SLEEP_S)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
