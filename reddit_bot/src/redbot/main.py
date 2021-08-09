@@ -60,19 +60,20 @@ def ingest_new_posts(limit, sub_name):
         now = time.time()
         duration_s = now - p.created_utc
         duration_hr = duration_s / 3600.
-        if p.id in uids:
-            if duration_hr <= 1:
-                # Update score of an existing post within 1 hr of its creation.
-                # The score (upvote - downvote) within the first hour of
-                # creation can be used as a predictor for the model.
-                idy = p.id
-                new_score = p.score
-                db.update_score(con, new_score, idy)
-                _log.info(f"Score update for {p.id} to {new_score}")
-        else:
-            # Create new post entry
-            db.insert_new_post(con, p, None, now, sub_name, None)
-            _log.info(f"Post insertion for {p.id} with title {p.title}")
+        if not p.stickied:
+            if p.id in uids:
+                if duration_hr <= 1:
+                    # Update score of an existing post within 1 hr of its creation.
+                    # The score (upvote - downvote) within the first hour of
+                    # creation can be used as a predictor for the model.
+                    idy = p.id
+                    new_score = p.score
+                    db.update_score(con, new_score, idy)
+                    _log.info(f"Score update for {p.id} to {new_score}")
+            else:
+                # Create new post entry
+                db.insert_new_post(con, p, None, now, sub_name, None)
+                _log.info(f"Post insertion for {p.id} with title {p.title}")
 
     con.commit()
 
@@ -98,18 +99,19 @@ def check_hot_posts(limit, sub_name):
     con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=True)
     uids = db.get_uids(con)
     for num, p in enumerate(posts):
-        now = time.time()
-        duration_s = now - p.created_utc
-        duration_hr = duration_s / 3600.
-        if p.id in uids and duration_hr <= 24:
-            # Update high rank and time corresponding to high rank within
-            # 24 hrs of creation of the post.
-            idy = p.id
-            high_rank = db.get_highrank(con, idy)
-            if high_rank is None or num < high_rank:
-                db.update_highrank(con, num, idy)
-                db.update_time_highrank(con, datetime.utcfromtimestamp(now), idy)
-                _log.info(f"High rank update for {p.id} from {high_rank} to {num} at {datetime.utcfromtimestamp(now)}")
+        if not p.stickied:
+            now = time.time()
+            duration_s = now - p.created_utc
+            duration_hr = duration_s / 3600.
+            if p.id in uids and duration_hr <= 24:
+                # Update high rank and time corresponding to high rank within
+                # 24 hrs of creation of the post.
+                idy = p.id
+                high_rank = db.get_highrank(con, idy)
+                if high_rank is None or num < high_rank:
+                    db.update_highrank(con, num, idy)
+                    db.update_time_highrank(con, datetime.utcfromtimestamp(now), idy)
+                    _log.info(f"High rank update for {p.id} from {high_rank} to {num} at {datetime.utcfromtimestamp(now)}")
     con.commit()
 
 
