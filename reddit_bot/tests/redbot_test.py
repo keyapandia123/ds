@@ -79,12 +79,12 @@ def test_db_insertion_and_update():
         assert list_uids[0] == 'uid'
 
         current_high_rank = db.get_highrank(con, 'uid')
-        assert current_high_rank[0] == 4
+        assert current_high_rank == 4
 
         new_high_rank = 0
         db.update_highrank(con, new_high_rank, 'uid')
         saved_high_rank = db.get_highrank(con, 'uid')
-        assert saved_high_rank[0] == new_high_rank
+        assert saved_high_rank == new_high_rank
 
         new_score = 25
         db.update_score(con, new_score, 'uid')

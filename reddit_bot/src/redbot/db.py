@@ -93,7 +93,7 @@ def get_highrank(con, uid):
     SELECT highrank24 FROM posts WHERE uid=?
     """
     high_rank_gen = cursor.execute(sql, (uid,))
-    return next(high_rank_gen)
+    return next(high_rank_gen)[0]
 
 
 def update_highrank(con, new_high_rank, uid):
