@@ -124,8 +124,7 @@ def main():
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
         time.sleep(1)
         check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
-        time.sleep(1)
-        #time.sleep(SLEEP_S)
+        time.sleep(SLEEP_S)
 
 
 if __name__ == '__main__':
