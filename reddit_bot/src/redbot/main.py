@@ -1,4 +1,7 @@
 from datetime import datetime
+import logging
+from logging import handlers
+import os
 import time
 
 import praw
@@ -7,12 +10,32 @@ import credentials
 import db
 
 
+LOG_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
+LOGFILE = os.path.expanduser('~/.redbot/log')
 REDDIT = praw.Reddit(**credentials.load_credentials())
 DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
 SUB_NAME = 'politics'
 NEW_POST_LIMIT = 20
 HOT_POST_LIMIT = 10
 SLEEP_S = 60
+
+
+def setup_logging(logFile, log_formatter):
+    my_handler = handlers.RotatingFileHandler(logFile, maxBytes=10 * 1024 * 1024, backupCount=2)
+    my_handler.setFormatter(log_formatter)
+    logging.getLogger().setLevel(logging.INFO)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(log_formatter)
+
+    _log = logging.getLogger(__name__)
+    _log.addHandler(my_handler)
+    _log.addHandler(stream_handler)
+
+    return _log
+
+
+_log = setup_logging(LOGFILE, LOG_FORMATTER)
 
 
 def ingest_new_posts(limit, sub_name):
@@ -45,9 +68,11 @@ def ingest_new_posts(limit, sub_name):
                 idy = p.id
                 new_score = p.score
                 db.update_score(con, new_score, idy)
+                _log.info(f"Score update for {p.id} to {new_score}")
         else:
             # Create new post entry
             db.insert_new_post(con, p, None, now, sub_name, None)
+            _log.info(f"Post insertion for {p.id} with title {p.title}")
 
     con.commit()
 
@@ -84,7 +109,7 @@ def check_hot_posts(limit, sub_name):
             if high_rank is None or num < high_rank:
                 db.update_highrank(con, num, idy)
                 db.update_time_highrank(con, datetime.utcfromtimestamp(now), idy)
-
+                _log.info(f"High rank update for {p.id} from {high_rank} to {num} at {datetime.utcfromtimestamp(now)}")
     con.commit()
 
 
@@ -99,7 +124,8 @@ def main():
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
         time.sleep(1)
         check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
-        time.sleep(SLEEP_S)
+        time.sleep(1)
+        #time.sleep(SLEEP_S)
 
 
 if __name__ == '__main__':
