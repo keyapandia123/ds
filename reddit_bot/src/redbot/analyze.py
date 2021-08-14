@@ -119,7 +119,8 @@ def title_keywords(con=None):
     all_titles.extend(non_hot_titles)
     all_labels.extend(non_hot_labels)
 
-    vec_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on', 'as', 'from'])
+    vec_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on',
+                                                                  'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with'])
     raw_features = vec_hot.fit_transform(hot_titles)
     feature_names = vec_hot.get_feature_names()
     dense = raw_features.todense()
@@ -132,9 +133,12 @@ def title_keywords(con=None):
     ax.imshow(wordcloud)
     ax.set_title("Hot Post Titles", fontsize=80)
     plt.axis("off")
-    fig.savefig(os.path.expanduser(f"~/ml/reddit_bot/hot_post_titles.png"))
+    if not os.path.exists(os.path.expanduser("~/ml/reddit_bot")):
+        os.makedirs(os.path.expanduser("~/ml/reddit_bot"))
+    fig.savefig(os.path.expanduser("~/ml/reddit_bot/hot_post_titles.png"))
 
-    vec_non_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on', 'as', 'from'])
+    vec_non_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on',
+                                                                      'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with'])
     raw_features = vec_non_hot.fit_transform(non_hot_titles)
     feature_names = vec_non_hot.get_feature_names()
     dense = raw_features.todense()
@@ -147,7 +151,7 @@ def title_keywords(con=None):
     ax.imshow(wordcloud)
     ax.set_title("Non Hot Post Titles", fontsize=80)
     plt.axis("off")
-    fig.savefig(os.path.expanduser(f"~/ml/reddit_bot/non_hot_post_titles.png"))
+    fig.savefig(os.path.expanduser("~/ml/reddit_bot/non_hot_post_titles.png"))
 
 
 def domains(con=None):
@@ -190,6 +194,8 @@ def domains(con=None):
     plt.title("Hot Post Domains", fontsize=80)
     plt.axis("off")
     plt.show()
+    if not os.path.exists(os.path.expanduser("~/ml/reddit_bot")):
+        os.makedirs(os.path.expanduser("~/ml/reddit_bot"))
     plt.savefig(os.path.expanduser("~/ml/reddit_bot/hot_post_domains.png"))
 
     wordcloud = WordCloud(width=1000, height=500).generate_from_frequencies(dd_non_hot)
