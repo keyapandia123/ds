@@ -15,6 +15,18 @@ DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
 
 
 def return_post_counts(con=None):
+    """Generate various counts of posts in the database."
+
+    Args:
+        con: database connection
+
+    Returns:
+        total_post_cnt: int. Number of total posts in the database
+        total_hot_post_cnt: int. Number of total hot posts in the database
+        total_valid_post_cnt: int. Number of total posts in the database that were created over 24 hours ago
+        total_hot_valid_post_cnt: int. Number of total hot posts in the database that were created over 24 hours ago
+
+    """
     if not con:
         con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
@@ -52,6 +64,22 @@ def return_post_counts(con=None):
 
 
 def return_scores(con=None):
+    """Generate various statistics for scores of valid posts in the database."
+
+    The score of a post is the number of upvotes minus the number of downvotes.
+    A valid post is a post that was created over 24 hours ago.
+    A hot post is a post that appeared among the top 10 hot posts for
+    that subreddit within an hour of its creation.
+    A non-hot post is a post that did not appear among the top 10 hot posts for
+    that subreddit within an hour of its creation.
+
+    Args:
+        con: database connection
+
+    Returns:
+        [mean_hot, min_hot, max_hot]: list. List of mean (average), minimum, and maximum scores of valid hot posts
+        [mean_non_hot, min_non_hot, max_non_hot]: list. List of mean (average), minimum, and maximum scores of valid non-hot posts
+    """
     if not con:
          con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
@@ -87,6 +115,15 @@ def return_scores(con=None):
 
 
 def title_keywords(con=None):
+    """Analyze keywords in the titles of valid posts in the database."
+
+    Comparitively analyze the most dominant keywords in the titles of valid hot posts
+    versus the valid non-hot posts using term frequencies.
+    Generate and store images of wordclouds for hot posts and non-hot posts for visual comparison.
+
+    Args:
+        con: database connection
+    """
     if not con:
         con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
@@ -155,6 +192,15 @@ def title_keywords(con=None):
 
 
 def domains(con=None):
+    """Identify and analyze domains in the urls of valid posts in the database."
+
+    Comparitively analyze the most dominant web domains in the urls of valid hot posts
+    versus the valid non-hot posts.
+    Generate and store images of wordclouds for hot posts and non-hot posts for visual comparison.
+
+    Args:
+        con: database connection
+    """
     if not con:
         con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
@@ -171,7 +217,6 @@ def domains(con=None):
     ll_url_gen = list(url_gen)
     hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
     hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www' else elem.split('.')[0] for elem in hot_urls]
-    hot_labels = [1 for elem in ll_url_gen]
 
     sql2 = """
     SELECT url
@@ -183,7 +228,6 @@ def domains(con=None):
     non_hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
     non_hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
                               else elem.split('.')[0] for elem in non_hot_urls]
-    non_hot_labels = [0 for elem in ll_url_gen]
 
     dd_hot = collections.Counter(hot_urls_segmented)
     dd_non_hot = collections.Counter(non_hot_urls_segmented)
@@ -205,9 +249,3 @@ def domains(con=None):
     plt.axis("off")
     plt.show()
     plt.savefig(os.path.expanduser("~/ml/reddit_bot/non_hot_post_domains.png"))
-
-#total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = return_post_counts()
-
-#[mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = return_scores()
-
-#title_keywords_hot_posts()
