@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from redbot import analyze
+from redbot import analysis
 from redbot import credentials
 from redbot import db
 
@@ -99,13 +99,13 @@ def test_db_insertion_and_update():
 
 def test_run_analysis():
 
-    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analyze.return_post_counts()
+    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts()
 
-    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analyze.return_scores()
+    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores()
 
-    analyze.title_keywords()
+    analysis.title_keywords()
 
-    analyze.domains()
+    analysis.domains()
 
 
 def test_analyze():
@@ -164,10 +164,10 @@ def test_analyze():
         prediction = None
         db.insert_new_post(con, invalid_non_hot_post_3, high_rank, time_highrank, subreddit, prediction)
 
-        total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analyze.return_post_counts(con)
+        total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
 
-        [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analyze.return_scores(con)
+        [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores(con)
 
-        analyze.title_keywords(con)
+        analysis.title_keywords(con)
 
-        analyze.domains(con)
+        analysis.domains(con)
