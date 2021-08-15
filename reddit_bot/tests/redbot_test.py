@@ -10,6 +10,7 @@ import pytest
 from redbot import analysis
 from redbot import credentials
 from redbot import db
+from redbot import train
 
 
 # TODO: Move to db module.
@@ -171,3 +172,8 @@ def test_analyze():
         analysis.title_keywords(con)
 
         analysis.domains(con)
+
+
+def test_run_train():
+
+    train.run_and_evaluate_training()
