@@ -143,6 +143,7 @@ def build_and_verify_model(clf, x_train_tr, x_test_tr, y_train, y_test):
     Returns:
         accuracy: float. Accuracy score evaluated on test data.
         f1: float. F1-score evaluated on test data.
+        recall: float. Recall score evaluated on test data.
         cm: numpy array. Confusion matrix evaluated on test data.
     """
     clf.fit(x_train_tr, y_train)
@@ -150,19 +151,21 @@ def build_and_verify_model(clf, x_train_tr, x_test_tr, y_train, y_test):
 
     accuracy = metrics.accuracy_score(y_test, y_pred)
     f1 = metrics.f1_score(y_test, y_pred)
+    recall = metrics.recall_score(y_test, y_pred)
     cm = metrics.confusion_matrix(y_test, y_pred, normalize='true')
 
     print("Accuracy :", accuracy)
     print("F1 score :", f1)
+    print("Recall score :", recall)
     print("Confusion Matrix : ", cm)
 
-    return accuracy, f1, cm
+    return accuracy, f1, recall, cm
 
 
 def run_and_evaluate_training():
     """Comparative analysis of three types of classifiers.
 
-    Compare accuracy, F1-score, and confusion matrix for
+    Compare accuracy, F1-score, recall score, and confusion matrix for
     Logistic Regression, XGBoost, and LightGBM Classifiers.
     """
     df = preprocess_valid_data()
@@ -171,16 +174,16 @@ def run_and_evaluate_training():
 
     print("Logistic Regression: ")
     clf1 = linear_model.LogisticRegression(max_iter=4000)
-    accuracy, f1, cm = build_and_verify_model(clf1, x_train_transformed, x_test_transformed, y_train, y_test)
+    accuracy, f1, recall, cm = build_and_verify_model(clf1, x_train_transformed, x_test_transformed, y_train, y_test)
 
     print("\nXGBoost : ")
     clf2 = XGBClassifier(booster='gbtree', max_depth=12, learning_rate=0.1, n_estimators=1000, use_label_encoder=False)
-    accuracy, f1, cm = build_and_verify_model(clf2, x_train_transformed, x_test_transformed, y_train, y_test)
+    accuracy, f1, recall, cm = build_and_verify_model(clf2, x_train_transformed, x_test_transformed, y_train, y_test)
 
     print("\nLightGBM : ")
     class_wts = {0: 1, 1: 1000}
     clf3 = LGBMClassifier(boosting_type='gbdt', num_leaves=5, max_depth=12, min_child_samples=20, learning_rate=0.1,
                           n_estimators=700, class_weight=class_wts)
-    accuracy, f1, cm = build_and_verify_model(clf3, x_train_transformed, x_test_transformed, y_train, y_test)
+    accuracy, f1, recall, cm = build_and_verify_model(clf3, x_train_transformed, x_test_transformed, y_train, y_test)
 
 
