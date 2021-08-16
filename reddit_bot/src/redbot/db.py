@@ -109,6 +109,7 @@ def update_highrank(con, new_high_rank, uid):
     UPDATE posts SET highrank24=? WHERE uid=?
     """
     cursor.execute(sql, (new_high_rank, uid))
+    con.commit()
 
 
 def update_time_highrank(con, new_time_highrank, uid):
@@ -124,6 +125,7 @@ def update_time_highrank(con, new_time_highrank, uid):
     UPDATE posts SET time_highrank=? WHERE uid=?
     """
     cursor.execute(sql, (new_time_highrank, uid))
+    con.commit()
 
 
 
@@ -140,6 +142,7 @@ def update_score(con, new_score, uid):
     UPDATE posts SET score=? WHERE uid=?
     """
     cursor.execute(sql, (new_score, uid))
+    con.commit()
 
 
 def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
@@ -170,3 +173,4 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
          subreddit,
          prediction)
     )
+    con.commit()

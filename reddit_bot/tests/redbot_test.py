@@ -61,7 +61,10 @@ def test_db_insertion_and_update():
         time_highrank = current_time_utc
         subreddit = 'politics'
         prediction = None
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction)
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_post = con.cursor().execute("select * from posts").fetchall()
         assert len(saved_post) == 1
         saved_post = saved_post[0]
@@ -80,22 +83,43 @@ def test_db_insertion_and_update():
         assert len(list_uids) == 1
         assert list_uids[0] == 'uid'
 
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         current_high_rank = db.get_highrank(con, 'uid')
         assert current_high_rank == 4
 
         new_high_rank = 0
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         db.update_highrank(con, new_high_rank, 'uid')
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_high_rank = db.get_highrank(con, 'uid')
         assert saved_high_rank == new_high_rank
 
         new_score = 25
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         db.update_score(con, new_score, 'uid')
+        con = db.connect_to_db(temp_path, create_if_empty=False)
         cursor = con.cursor()
         sql = """
         SELECT score FROM posts WHERE uid=?
         """
         saved_score_gen = cursor.execute(sql, ('uid',))
         assert list(saved_score_gen)[0][0] == new_score
+
+        new_time_high_rank = time.time()
+        new_time_high_rank_utc = datetime.utcfromtimestamp(new_time_high_rank)
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        db.update_time_highrank(con, new_time_high_rank_utc, 'uid')
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        cursor = con.cursor()
+        sql = """
+        SELECT time_highrank FROM posts WHERE uid=?
+        """
+        saved_time_gen = cursor.execute(sql, ('uid',))
+        assert list(saved_time_gen)[0][0] == new_time_high_rank_utc
 
 
 def test_run_analysis():
