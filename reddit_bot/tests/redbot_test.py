@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 
+import numpy as np
 import pytest
 
 from redbot import analysis
@@ -56,14 +57,14 @@ def test_db_insertion_and_update():
         con = db.connect_to_db(temp_path, create_if_empty=True)
         current_time = time.time()
         current_time_utc = datetime.utcfromtimestamp(current_time)
-        new_post = Post('uid', 'url', 'title', 5, 0.9, current_time)
+        new_post = Post('uid', 'url', 'title', np.int64(5), np.float(0.9), current_time)
         high_rank = 4
         time_highrank = current_time_utc
         subreddit = 'politics'
         prediction = None
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, new_post, np.int64(high_rank), time_highrank, subreddit, prediction)
         con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_post = con.cursor().execute("select * from posts").fetchall()
         assert len(saved_post) == 1
@@ -91,7 +92,7 @@ def test_db_insertion_and_update():
         new_high_rank = 0
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.update_highrank(con, new_high_rank, 'uid')
+        db.update_highrank(con, np.int64(new_high_rank), 'uid')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_high_rank = db.get_highrank(con, 'uid')
         assert saved_high_rank == new_high_rank
@@ -99,7 +100,7 @@ def test_db_insertion_and_update():
         new_score = 25
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.update_score(con, new_score, 'uid')
+        db.update_score(con, np.int64(new_score), 'uid')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         cursor = con.cursor()
         sql = """
