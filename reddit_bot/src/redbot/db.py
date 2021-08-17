@@ -173,3 +173,19 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
          prediction)
     )
     con.commit()
+
+
+def update_prediction(con, new_pred, idy):
+    """Update the prediction of a specified post in the database.
+
+    Args:
+        con: database connection
+        new_pred: int. The most recent updated prediction (hot or not) for the specified post.
+        idy: int. The post id or primary key.
+    """
+    cursor = con.cursor()
+    sql = """
+    UPDATE posts SET prediction=? WHERE id=?
+    """
+    cursor.execute(sql, (int(new_pred), int(idy)))
+    con.commit()

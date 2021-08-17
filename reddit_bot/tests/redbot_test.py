@@ -122,6 +122,18 @@ def test_db_insertion_and_update():
         saved_time_gen = cursor.execute(sql, ('uid',))
         assert list(saved_time_gen)[0][0] == new_time_high_rank_utc
 
+        new_pred = 1
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        db.update_prediction(con, np.int64(new_pred), 1)
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        cursor = con.cursor()
+        sql = """
+        SELECT prediction FROM posts WHERE id=1
+        """
+        saved_pred_gen = cursor.execute(sql)
+        assert list(saved_pred_gen)[0][0] == new_pred
+
 
 def test_run_analysis():
 
@@ -202,3 +214,5 @@ def test_analyze():
 def test_run_train():
 
     train.run_and_evaluate_training()
+
+
