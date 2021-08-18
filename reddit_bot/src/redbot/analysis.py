@@ -5,8 +5,9 @@ import os
 from urllib.parse import urlparse
 
 from matplotlib import pyplot as plt
+import numpy as np
 import pandas as pd
-from sklearn import feature_extraction, feature_selection
+from sklearn import feature_extraction, metrics
 from wordcloud import WordCloud
 
 from redbot import db
@@ -281,3 +282,38 @@ def domains(con=None):
     plt.axis("off")
     plt.show()
     plt.savefig(os.path.expanduser("~/ml/reddit_bot/non_hot_post_domains.png"))
+
+
+def calculate_recall(con=None, win_hr=24.0):
+    if not con:
+        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
+
+    current_time = time.time()
+    current_time_utc = datetime.utcfromtimestamp(current_time)
+
+    sql = """
+    SELECT id, uid, highrank24, score, prediction FROM posts 
+    WHERE (prediction IS NOT NULL) AND 
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= ?) AND 
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= ?)
+    """
+    pred_df = pd.read_sql(sql, con, params=[current_time_utc, win_hr, current_time_utc, win_hr + 24.0])
+
+    hot_or_not = []
+    for idx in pred_df.index:
+
+        if pred_df.loc[idx]['highrank24'] is None or np.isnan(pred_df.loc[idx]['highrank24']):
+            hot_or_not.append(0)
+        else:
+            hot_or_not.append(1)
+
+    pred_df['hot_or_not'] = hot_or_not
+
+    recall = metrics.recall_score(pred_df['hot_or_not'], pred_df['prediction'])
+    accuracy = metrics.accuracy_score(pred_df['hot_or_not'], pred_df['prediction'])
+    print("Time :", current_time_utc)
+    print("Recall :", recall)
+    print("Accuracy :", accuracy)
+    print(pred_df[(pred_df['hot_or_not'] == 1) | (pred_df['prediction'] == 1)])
+
+    return pred_df, recall, accuracy
