@@ -166,7 +166,7 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
          post.title,
          int(post.score),
          post.upvote_ratio,
-         int(high_rank),
+         int(high_rank) if high_rank is not None else high_rank,
          datetime.utcfromtimestamp(post.created_utc),
          time_highrank,
          subreddit,
