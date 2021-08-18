@@ -6,8 +6,9 @@ import time
 
 import praw
 
-import credentials
-import db
+from redbot import credentials
+from redbot import db
+from redbot import inference
 
 
 LOG_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
@@ -126,6 +127,7 @@ def main():
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
         time.sleep(1)
         check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
+        inference.run_inference(new_model=False, to_save=False)
         time.sleep(SLEEP_S)
 
 
