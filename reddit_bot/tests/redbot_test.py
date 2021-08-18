@@ -216,3 +216,6 @@ def test_run_train():
     train.run_and_evaluate_training()
 
 
+def test_analyze_inference():
+
+    analysis.calculate_recall(con=None, win_hr=3.0)
