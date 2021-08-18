@@ -151,13 +151,25 @@ def title_keywords(con=None):
     non_hot_titles = [elem[0] for elem in ll_title_gen]
     non_hot_labels = [0 for elem in ll_title_gen]
 
+    sql3 = """
+    SELECT title
+    FROM posts 
+    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 24
+    """
+    title_gen = cursor.execute(sql3, (current_time_utc,))
+    ll_title_gen = list(title_gen)
+    trending_titles = [elem[0] for elem in ll_title_gen]
+
+    if not hot_titles or not non_hot_titles or not trending_titles:
+        return
+
     all_titles = hot_titles.copy()
     all_labels = hot_labels.copy()
     all_titles.extend(non_hot_titles)
     all_labels.extend(non_hot_labels)
 
     vec_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on',
-                                                                  'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with'])
+                                                                  'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with', 'by'])
     raw_features = vec_hot.fit_transform(hot_titles)
     feature_names = vec_hot.get_feature_names()
     dense = raw_features.todense()
@@ -175,7 +187,7 @@ def title_keywords(con=None):
     fig.savefig(os.path.expanduser("~/ml/reddit_bot/hot_post_titles.png"))
 
     vec_non_hot = feature_extraction.text.TfidfVectorizer(stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on',
-                                                                      'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with'])
+                                                                      'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with', 'by'])
     raw_features = vec_non_hot.fit_transform(non_hot_titles)
     feature_names = vec_non_hot.get_feature_names()
     dense = raw_features.todense()
@@ -189,6 +201,23 @@ def title_keywords(con=None):
     ax.set_title("Non Hot Post Titles", fontsize=80)
     plt.axis("off")
     fig.savefig(os.path.expanduser("~/ml/reddit_bot/non_hot_post_titles.png"))
+
+    vec_trending = feature_extraction.text.TfidfVectorizer(
+        stop_words=['of', 'to', 'in', 'for', 'the', 'and', 'are', 'on',
+                    'as', 'from', 'is', 'he', 'his', 'it', 'that', 'was', 'with', 'by'])
+    raw_features = vec_trending.fit_transform(trending_titles)
+    feature_names = vec_trending.get_feature_names()
+    dense = raw_features.todense()
+    lst1 = dense.tolist()
+    df = pd.DataFrame(lst1, columns=feature_names)
+    wordcloud = WordCloud(width=1000, height=500).generate_from_frequencies(df.T.sum(axis=1))
+
+    fig = plt.figure(figsize=(15, 8))
+    ax = fig.add_subplot(111)
+    ax.imshow(wordcloud)
+    ax.set_title("Trending Post Titles", fontsize=80)
+    plt.axis("off")
+    fig.savefig(os.path.expanduser("~/ml/reddit_bot/trending_post_titles.png"))
 
 
 def domains(con=None):
@@ -228,6 +257,9 @@ def domains(con=None):
     non_hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
     non_hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
                               else elem.split('.')[0] for elem in non_hot_urls]
+
+    if not hot_urls_segmented or not non_hot_urls_segmented:
+        return
 
     dd_hot = collections.Counter(hot_urls_segmented)
     dd_non_hot = collections.Counter(non_hot_urls_segmented)
