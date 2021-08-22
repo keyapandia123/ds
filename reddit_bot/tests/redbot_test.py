@@ -6,6 +6,7 @@ import tempfile
 import time
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from redbot import analysis
@@ -90,12 +91,20 @@ def test_db_insertion_and_update():
         assert current_high_rank == 4
 
         new_high_rank = 0
+        new_time_high_rank = time.time()
+        new_time_high_rank_utc = datetime.utcfromtimestamp(new_time_high_rank)
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.update_highrank(con, np.int64(new_high_rank), 'uid')
+        db.update_highrank(con, np.int64(new_high_rank), new_time_high_rank_utc, 'uid')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_high_rank = db.get_highrank(con, 'uid')
         assert saved_high_rank == new_high_rank
+        cursor = con.cursor()
+        sql = """
+        SELECT time_highrank FROM posts WHERE uid=?
+        """
+        saved_time_gen = cursor.execute(sql, ('uid',))
+        assert list(saved_time_gen)[0][0] == new_time_high_rank_utc
 
         new_score = 25
         con.commit()
@@ -109,19 +118,6 @@ def test_db_insertion_and_update():
         saved_score_gen = cursor.execute(sql, ('uid',))
         assert list(saved_score_gen)[0][0] == new_score
 
-        new_time_high_rank = time.time()
-        new_time_high_rank_utc = datetime.utcfromtimestamp(new_time_high_rank)
-        con.commit()
-        con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.update_time_highrank(con, new_time_high_rank_utc, 'uid')
-        con = db.connect_to_db(temp_path, create_if_empty=False)
-        cursor = con.cursor()
-        sql = """
-        SELECT time_highrank FROM posts WHERE uid=?
-        """
-        saved_time_gen = cursor.execute(sql, ('uid',))
-        assert list(saved_time_gen)[0][0] == new_time_high_rank_utc
-
         new_pred = 1
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
@@ -133,6 +129,19 @@ def test_db_insertion_and_update():
         """
         saved_pred_gen = cursor.execute(sql)
         assert list(saved_pred_gen)[0][0] == new_pred
+
+        new_post = Post('uid', 'url', 'title', np.int64(5), np.float(0.9), current_time)
+        high_rank = None
+        time_highrank = None
+        subreddit = 'politics'
+        prediction = None
+        con.commit()
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction)
+        con = db.connect_to_db(temp_path, create_if_empty=False)
+        df = pd.read_sql("select * from posts", con)
+        assert df['time_highrank'].dtype.name == 'datetime64[ns]'
+        assert df['highrank24'].dtype.name == 'float64'
 
 
 def test_run_analysis():
@@ -218,4 +227,4 @@ def test_run_train():
 
 def test_analyze_inference():
 
-    analysis.calculate_recall(con=None, win_hr=3.0)
+    analysis.calculate_recall(con=None, win_hr=5.0)

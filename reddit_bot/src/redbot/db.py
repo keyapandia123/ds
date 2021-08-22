@@ -96,35 +96,20 @@ def get_highrank(con, uid):
     return next(high_rank_gen)[0]
 
 
-def update_highrank(con, new_high_rank, uid):
-    """Update the highest rank of a specified post in the database.
+def update_highrank(con, new_high_rank, new_time_highrank, uid):
+    """Update the highest rank of a specified post in the database and its corresponding time.
 
     Args:
         con: database connection
         new_high_rank: int. The highest updated high rank for the specified post.
-        uid: str. The post id obtained from PRAW.
-    """
-    cursor = con.cursor()
-    sql = """
-    UPDATE posts SET highrank24=? WHERE uid=?
-    """
-    cursor.execute(sql, (int(new_high_rank), uid))
-    con.commit()
-
-
-def update_time_highrank(con, new_time_highrank, uid):
-    """Update time of the highest rank of a specified post in the database.
-
-    Args:
-        con: database connection
         new_time_highrank: datetime. The time corresponding to the highest updated high rank for the specified post.
         uid: str. The post id obtained from PRAW.
     """
     cursor = con.cursor()
     sql = """
-    UPDATE posts SET time_highrank=? WHERE uid=?
+    UPDATE posts SET highrank24=?, time_highrank=? WHERE uid=?
     """
-    cursor.execute(sql, (new_time_highrank, uid))
+    cursor.execute(sql, (int(new_high_rank), new_time_highrank, uid))
     con.commit()
 
 
