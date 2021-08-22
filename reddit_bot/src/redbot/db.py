@@ -132,12 +132,19 @@ def update_score(con, new_score, uid):
 def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
     """Insert a new post entry into the database.
 
-    Create new entry with uid, url, title, score, and highrank24 corresponding to the new post.
+    Create new entry with uid, url, title, score, up_vote ratio, highrank, time of high rank,
+    subreddit, and prediction corresponding to the new post.
 
     Args:
         con: database connection
         post: post object obtained from PRAW.
         high_rank: int. The highest rank of the post at the time of creation/insertion into the database.
+        Initialized to None.
+        time_highrank: datatime. The time corresponding to highest rank at the time of post creation.
+        Initialized to None.
+        subreddit: str. Name of subreddit of the new post.
+        prediction: int. Prediction on whether the post is likely to appear among the top 10 hot posts.
+        Initialized to None.
     """
     cursor = con.cursor()
     sql = """
