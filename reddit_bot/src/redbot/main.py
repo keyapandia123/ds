@@ -3,6 +3,7 @@ import logging
 from logging import handlers
 import os
 import time
+import uuid
 
 import praw
 
@@ -73,7 +74,7 @@ def ingest_new_posts(limit, sub_name):
                     _log.info(f"Score update for {p.id} to {new_score}")
             else:
                 # Create new post entry
-                db.insert_new_post(con, p, None, None, sub_name, None)
+                db.insert_new_post(con, p, None, None, sub_name, None, str(uuid.uuid4()))
                 _log.info(f"Post insertion for {p.id} with title {p.title}")
 
     con.commit()
@@ -126,7 +127,8 @@ def main():
         ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
         time.sleep(1)
         check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
-        inference.run_inference(new_model=False, to_save=False)
+        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
+        inference.run_inference(con, new_model=False, to_save=False)
         time.sleep(SLEEP_S)
 
 

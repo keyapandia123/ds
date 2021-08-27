@@ -38,9 +38,9 @@ def test_db_creation():
         SELECT name FROM PRAGMA_TABLE_INFO('posts')
         """
         ll = list(cursor.execute(sql))
-        true_cols = ['id', 'uid', 'url', 'title', 'score', 'upvote_ratio',
+        true_cols = ['uuid', 'uid', 'url', 'title', 'score', 'upvote_ratio',
                      'highrank24', 'created_utc', 'time_highrank', 'subreddit',
-                     'prediction']
+                     'prediction', 'db_version']
         assert len(ll) == len(true_cols)
         for c1, c2 in zip(ll, true_cols):
             assert c1[0] == c2
@@ -66,11 +66,12 @@ def test_db_insertion_and_update():
         prediction = None
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.insert_new_post(con, new_post, np.int64(high_rank), time_highrank, subreddit, prediction)
+        db.insert_new_post(con, new_post, np.int64(high_rank), time_highrank, subreddit, prediction, 'uuid1')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         saved_post = con.cursor().execute("select * from posts").fetchall()
         assert len(saved_post) == 1
         saved_post = saved_post[0]
+        assert saved_post[0] == 'uuid1'
         assert saved_post[1] == 'uid'
         assert saved_post[2] == 'url'
         assert saved_post[3] == 'title'
@@ -81,6 +82,7 @@ def test_db_insertion_and_update():
         assert saved_post[8] == current_time_utc
         assert saved_post[9] == 'politics'
         assert saved_post[10] is None
+        assert saved_post[11] == db.DB_VERSION
 
         list_uids = db.get_uids(con)
         assert len(list_uids) == 1
@@ -122,11 +124,11 @@ def test_db_insertion_and_update():
         new_pred = 1
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.update_prediction(con, np.int64(new_pred), 1)
+        db.update_prediction(con, np.int64(new_pred), 'uuid1')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         cursor = con.cursor()
         sql = """
-        SELECT prediction FROM posts WHERE id=1
+        SELECT prediction FROM posts WHERE uuid='uuid1'
         """
         saved_pred_gen = cursor.execute(sql)
         assert list(saved_pred_gen)[0][0] == new_pred
@@ -138,23 +140,11 @@ def test_db_insertion_and_update():
         prediction = None
         con.commit()
         con = db.connect_to_db(temp_path, create_if_empty=False)
-        db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, new_post, high_rank, time_highrank, subreddit, prediction, 'uuid2')
         con = db.connect_to_db(temp_path, create_if_empty=False)
         df = pd.read_sql("select * from posts", con)
         assert df['time_highrank'].dtype.name == 'datetime64[ns]'
         assert df['highrank24'].dtype.name == 'float64'
-
-
-def test_run_analysis():
-    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
-
-    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
-
-    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores(con)
-
-    analysis.title_keywords(con)
-
-    analysis.domains(con)
 
 
 def test_analyze():
@@ -169,49 +159,49 @@ def test_analyze():
         time_highrank = current_time_utc - timedelta(hours=20, minutes=00)
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, valid_hot_post_1, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, valid_hot_post_1, high_rank, time_highrank, subreddit, prediction, 'uuid1')
 
         valid_hot_post_2 = Post('uid2', 'https://politico.com', 'Hot Post 2', 450, 0.9, current_time - 32 * 3600)
         high_rank = 3
         time_highrank = current_time_utc - timedelta(hours=30, minutes=00)
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, valid_hot_post_2, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, valid_hot_post_2, high_rank, time_highrank, subreddit, prediction, 'uuid2')
 
         valid_hot_post_3 = Post('uid3', 'https://washingtonpost.com', 'Hot Post 3', 550, 0.9, current_time - 28 * 3600)
         high_rank = 7
         time_highrank = current_time_utc - timedelta(hours=26, minutes=00)
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, valid_hot_post_3, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, valid_hot_post_3, high_rank, time_highrank, subreddit, prediction, 'uuid3')
 
         invalid_hot_post_4 = Post('uid4', 'https://cnn.com', 'Invalid Hot Post 4', 700, 0.9, current_time - 12 * 3600)
         high_rank = 3
         time_highrank = current_time_utc - timedelta(hours=10, minutes=00)
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, invalid_hot_post_4, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, invalid_hot_post_4, high_rank, time_highrank, subreddit, prediction, 'uuid4')
 
         valid_non_hot_post_1 = Post('uid5', 'https://businessinsider.com', 'Non-hot Post 1', 10, 0.9, current_time - 30 * 3600)
         high_rank = None
         time_highrank = None
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, valid_non_hot_post_1, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, valid_non_hot_post_1, high_rank, time_highrank, subreddit, prediction, 'uuid5')
 
         valid_non_hot_post_2 = Post('uid6', 'http://www.businessinsider.com', 'Non-hot Post 2', 15, 0.9, current_time - 28 * 3600)
         high_rank = None
         time_highrank = None
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, valid_non_hot_post_2, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, valid_non_hot_post_2, high_rank, time_highrank, subreddit, prediction, 'uuid6')
 
-        invalid_non_hot_post_3 = Post('uid67', 'http://www.independent.co.uk', 'Non-hot Post 3', 20, 0.9, current_time)
+        invalid_non_hot_post_3 = Post('uid7', 'http://www.independent.co.uk', 'Non-hot Post 3', 20, 0.9, current_time)
         high_rank = None
         time_highrank = None
         subreddit = 'politics'
         prediction = None
-        db.insert_new_post(con, invalid_non_hot_post_3, high_rank, time_highrank, subreddit, prediction)
+        db.insert_new_post(con, invalid_non_hot_post_3, high_rank, time_highrank, subreddit, prediction, 'uuid7')
 
         total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
 
@@ -220,6 +210,18 @@ def test_analyze():
         analysis.title_keywords(con)
 
         analysis.domains(con)
+
+
+def test_run_analysis():
+    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
+
+    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
+
+    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores(con)
+
+    analysis.title_keywords(con)
+
+    analysis.domains(con)
 
 
 def test_run_train():

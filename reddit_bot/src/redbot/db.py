@@ -150,7 +150,7 @@ def update_score(con, new_score, uid):
     con.commit()
 
 
-def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
+def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction, uuid):
     """Insert a new post entry into the database.
 
     Create new entry with uid, url, title, score, up_vote ratio, highrank, time of high rank,
@@ -166,15 +166,17 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
         subreddit: str. Name of subreddit of the new post.
         prediction: int. Prediction on whether the post is likely to appear among the top 10 hot posts.
         Initialized to None.
+        uuid: str. Globally unique id.
     """
     cursor = con.cursor()
     sql = """
-    INSERT INTO posts(uid, url, title, score, upvote_ratio, highrank24, created_utc, time_highrank, subreddit, prediction) 
-    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts(uuid, uid, url, title, score, upvote_ratio, highrank24, created_utc, time_highrank, subreddit, prediction, db_version) 
+    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     cursor.execute(
         sql,
-        (post.id,
+        (uuid,
+         post.id,
          post.url,
          post.title,
          int(post.score),
@@ -183,22 +185,23 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction):
          datetime.utcfromtimestamp(post.created_utc),
          time_highrank,
          subreddit,
-         prediction)
+         prediction,
+         DB_VERSION)
     )
     con.commit()
 
 
-def update_prediction(con, new_pred, idy):
+def update_prediction(con, new_pred, uuid):
     """Update the prediction of a specified post in the database.
 
     Args:
         con: database connection
         new_pred: int. The most recent updated prediction (hot or not) for the specified post.
-        idy: int. The post id or primary key.
+        uuid: str. The post uid obtained from PRAW.
     """
     cursor = con.cursor()
     sql = """
-    UPDATE posts SET prediction=? WHERE id=?
+    UPDATE posts SET prediction=? WHERE uuid=?
     """
-    cursor.execute(sql, (int(new_pred), int(idy)))
+    cursor.execute(sql, (int(new_pred), uuid))
     con.commit()

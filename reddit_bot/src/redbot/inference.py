@@ -68,7 +68,7 @@ def retrieve_hour_old_posts(con):
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
     sql = """
-    SELECT id, url, title, score, upvote_ratio FROM posts 
+    SELECT uuid, url, title, score, upvote_ratio FROM posts 
     WHERE (prediction IS NULL) AND  
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 1.0) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 3.0)
@@ -86,7 +86,7 @@ def preprocess_hour_old_posts(raw_test_df):
 
     Args:
         raw_test_df: DataFrame containing raw attributes
-        (id, url, title, score, upvote_ratio) for posts ingested
+        (uuid, url, title, score, upvote_ratio) for posts ingested
         between 1 and 3 hours ago.
 
     Returns:
@@ -106,9 +106,9 @@ def preprocess_hour_old_posts(raw_test_df):
 
     df['domain'] = full_domain
     prediction_table = pd.DataFrame()
-    prediction_table['id'] = df['id'].copy()
+    prediction_table['uuid'] = df['uuid'].copy()
 
-    df.drop(['url', 'id'], axis=1, inplace=True)
+    df.drop(['url', 'uuid'], axis=1, inplace=True)
 
     return df, prediction_table
 
@@ -121,9 +121,9 @@ def save_predictions_to_table(prediction_table, con):
         con: database connection.
     """
     for idx in prediction_table.index:
-        idy = prediction_table.loc[idx]['id']
+        uuid = prediction_table.loc[idx]['uuid']
         pred = prediction_table.loc[idx]['predictions']
-        db.update_prediction(con, pred, idy)
+        db.update_prediction(con, pred, uuid)
 
 
 def run_inference(con, new_model=True, to_save=False):

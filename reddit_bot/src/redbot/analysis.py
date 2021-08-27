@@ -29,27 +29,27 @@ def return_post_counts(con):
     cursor = con.cursor()
 
     sql1 = """
-    SELECT COUNT(id) FROM posts
+    SELECT COUNT(uid) FROM posts
     """
     post_cnt_gen = cursor.execute(sql1)
     total_post_cnt = list(post_cnt_gen)[0][0]
 
     sql2 = """
-    SELECT COUNT(id) FROM posts WHERE highrank24 IS NOT NULL"""
+    SELECT COUNT(uid) FROM posts WHERE highrank24 IS NOT NULL"""
     post_cnt_gen = cursor.execute(sql2)
     total_hot_post_cnt = list(post_cnt_gen)[0][0]
 
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
     sql3 = """
-    SELECT COUNT(id) FROM posts 
+    SELECT COUNT(uid) FROM posts 
     WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
     """
     post_cnt_gen = cursor.execute(sql3, (current_time_utc,))
     total_valid_post_cnt = list(post_cnt_gen)[0][0]
 
     sql4 = """
-    SELECT COUNT(id) FROM posts 
+    SELECT COUNT(uid) FROM posts 
     WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24 AND highrank24 IS NOT NULL
     """
     post_cnt_gen = cursor.execute(sql4, (current_time_utc,))
@@ -281,7 +281,7 @@ def calculate_recall(con, win_hr=24.0):
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
     sql = """
-    SELECT id, uid, highrank24, score, prediction FROM posts 
+    SELECT uuid, uid, highrank24, score, prediction FROM posts 
     WHERE (prediction IS NOT NULL) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= ?) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= ?)
