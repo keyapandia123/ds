@@ -12,6 +12,7 @@ import pytest
 from redbot import analysis
 from redbot import credentials
 from redbot import db
+from redbot import main
 from redbot import train
 
 
@@ -22,7 +23,7 @@ Post = collections.namedtuple(
 
 
 def test_credentials():
-    creds = credentials.load_credentials()
+    creds = credentials.load_reddit_credentials()
     assert 'client_id' in creds
     assert 'client_secret' in creds
     assert 'user_agent' in creds
@@ -145,14 +146,15 @@ def test_db_insertion_and_update():
 
 
 def test_run_analysis():
+    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
 
-    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts()
+    total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
 
-    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores()
+    [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot] = analysis.return_scores(con)
 
-    analysis.title_keywords()
+    analysis.title_keywords(con)
 
-    analysis.domains()
+    analysis.domains(con)
 
 
 def test_analyze():
@@ -221,10 +223,10 @@ def test_analyze():
 
 
 def test_run_train():
-
-    train.run_and_evaluate_training()
+    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
+    train.run_and_evaluate_training(con)
 
 
 def test_analyze_inference():
-
-    analysis.calculate_recall(con=None, win_hr=5.0)
+    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
+    analysis.calculate_recall(con, win_hr=5.0)

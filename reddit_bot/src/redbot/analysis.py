@@ -12,10 +12,8 @@ from wordcloud import WordCloud
 
 from redbot import db
 
-DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
 
-
-def return_post_counts(con=None):
+def return_post_counts(con):
     """Generate various counts of posts in the database."
 
     Args:
@@ -28,8 +26,6 @@ def return_post_counts(con=None):
         total_hot_valid_post_cnt: int. Number of total hot posts in the database that were created over 24 hours ago
 
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
 
     sql1 = """
@@ -64,7 +60,7 @@ def return_post_counts(con=None):
     return total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt
 
 
-def return_scores(con=None):
+def return_scores(con):
     """Generate various statistics for scores of valid posts in the database."
 
     The score of a post is the number of upvotes minus the number of downvotes.
@@ -81,8 +77,6 @@ def return_scores(con=None):
         [mean_hot, min_hot, max_hot]: list. List of mean (average), minimum, and maximum scores of valid hot posts
         [mean_non_hot, min_non_hot, max_non_hot]: list. List of mean (average), minimum, and maximum scores of valid non-hot posts
     """
-    if not con:
-         con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
 
     current_time = time.time()
@@ -115,7 +109,7 @@ def return_scores(con=None):
     return [mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot]
 
 
-def title_keywords(con=None):
+def title_keywords(con):
     """Analyze keywords in the titles of valid posts in the database."
 
     Comparitively analyze the most dominant keywords in the titles of valid hot posts
@@ -125,8 +119,6 @@ def title_keywords(con=None):
     Args:
         con: database connection
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
 
     current_time = time.time()
@@ -221,7 +213,7 @@ def title_keywords(con=None):
     fig.savefig(os.path.expanduser("~/ml/reddit_bot/trending_post_titles.png"))
 
 
-def domains(con=None):
+def domains(con):
     """Identify and analyze domains in the urls of valid posts in the database."
 
     Comparitively analyze the most dominant web domains in the urls of valid hot posts
@@ -231,8 +223,6 @@ def domains(con=None):
     Args:
         con: database connection
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
     cursor = con.cursor()
 
     current_time = time.time()
@@ -284,9 +274,8 @@ def domains(con=None):
     plt.savefig(os.path.expanduser("~/ml/reddit_bot/non_hot_post_domains.png"))
 
 
-def calculate_recall(con=None, win_hr=24.0):
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
+def calculate_recall(con, win_hr=24.0):
+
 
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)

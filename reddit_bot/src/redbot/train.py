@@ -11,10 +11,7 @@ from xgboost import XGBClassifier
 from redbot import db
 
 
-DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
-
-
-def preprocess_valid_data(con=None):
+def preprocess_valid_data(con):
     """Replace urls with domain names and highrank24 with 'hot or not' indicator.
 
     Generate a raw dataframe from all valid posts (created over 24 hours ago).
@@ -29,9 +26,6 @@ def preprocess_valid_data(con=None):
         df: DataFrame. A processed dataframe with features (domain name, title, score, up_vote ratio)
         and a 'hot or not' indicator for each valid post.
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
     sql = """
@@ -162,14 +156,14 @@ def build_and_verify_model(clf, x_train_tr, x_test_tr, y_train, y_test):
     return accuracy, f1, recall, cm
 
 
-def run_and_evaluate_training():
+def run_and_evaluate_training(con):
     """Comparative analysis of three types of classifiers.
 
     Compare accuracy, F1-score, recall score, and confusion matrix for
     Logistic Regression, XGBoost, and LightGBM Classifiers.
     """
-    df = preprocess_valid_data()
-    x_train, y_train, x_test, y_test = create_train_test_split(df, random_sample=True)
+    df = preprocess_valid_data(con)
+    x_train, y_train, x_test, y_test = create_train_test_split(df, random_sample=False)
     x_train_transformed, x_test_transformed = transform_text_columns(x_train, x_test)
 
     print("Logistic Regression: ")

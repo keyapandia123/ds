@@ -12,9 +12,6 @@ from redbot import db
 from redbot import train
 
 
-DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
-
-
 def create_transformer_and_model(df, to_save=False):
     """Generate column transformer and classifier/estimator object fitted to all of the valid data.
 
@@ -54,7 +51,7 @@ def create_transformer_and_model(df, to_save=False):
     return ct, clf
 
 
-def retrieve_hour_old_posts(con=None):
+def retrieve_hour_old_posts(con):
     """Retrieve posts ingested between 1 and 3 hours ago that have no predictions.
 
     Use posts that were ingested at least one hour prior to making predictions
@@ -68,9 +65,6 @@ def retrieve_hour_old_posts(con=None):
         (id, url, title, score, upvote_ratio) for posts ingested
         between 1 and 3 hours ago.
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
     sql = """
@@ -119,23 +113,20 @@ def preprocess_hour_old_posts(raw_test_df):
     return df, prediction_table
 
 
-def save_predictions_to_table(prediction_table, con=None):
+def save_predictions_to_table(prediction_table, con):
     """Update the prediction made for the hour old posts to posts table in the database.
 
     Args:
         prediction_table: DataFrame. Contains the primary key and prediction for the hour old posts.
         con: database connection.
     """
-    if not con:
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
-
     for idx in prediction_table.index:
         idy = prediction_table.loc[idx]['id']
         pred = prediction_table.loc[idx]['predictions']
         db.update_prediction(con, pred, idy)
 
 
-def run_inference(new_model=True, to_save=False):
+def run_inference(con, new_model=True, to_save=False):
     """Function to run inference on hour old posts.
 
     Generate new model and column transformer objects or retrieve saved objects.
@@ -144,6 +135,7 @@ def run_inference(new_model=True, to_save=False):
     for each post corresponding to each primary key.
 
     Args:
+        con: database connection.
         new_model: bool. If True, generate new estimator/classifier and column transformer object.
         If False, retrieve saved objects.
         to_save: bool. If True, save generated estimator/classifier and column transformer objects.
@@ -159,7 +151,7 @@ def run_inference(new_model=True, to_save=False):
         clf = load(open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/model.pkl"), 'rb'))
         ct = load(open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/ct.pkl"), 'rb'))
 
-    raw_test_df = retrieve_hour_old_posts()
+    raw_test_df = retrieve_hour_old_posts(con)
 
     df_test, prediction_table = preprocess_hour_old_posts(raw_test_df)
     if len(df_test.index) > 0:
@@ -170,7 +162,7 @@ def run_inference(new_model=True, to_save=False):
 
     prediction_table['predictions'] = y_pred
 
-    save_predictions_to_table(prediction_table)
+    save_predictions_to_table(prediction_table, con)
 
     return prediction_table
 
