@@ -3,6 +3,12 @@ from datetime import datetime
 import os
 import sqlite3
 
+from google.cloud import bigquery
+from google.cloud.bigquery import dbapi
+
+
+DB_VERSION = 'v2'
+
 
 class DatabaseNotFoundError(Exception):
     """Raised when database is not found."""
@@ -17,7 +23,7 @@ def create_schema(con):
     cursor = con.cursor()
     cursor.execute("""
         CREATE TABLE posts(
-            id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            uuid TEXT, 
             uid TEXT, 
             url TEXT, 
             title TEXT, 
@@ -27,7 +33,8 @@ def create_schema(con):
             created_utc TIMESTAMP,
             time_highrank TIMESTAMP, 
             subreddit TEXT, 
-            prediction INTEGER
+            prediction INTEGER,
+            db_version TEXT
             )
         """)
     con.commit()
@@ -58,6 +65,20 @@ def connect_to_db(db_path, create_if_empty=False):
         con = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
         create_schema(con)
     con = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+    return con
+
+
+def connect_to_gbq(credentials):
+    """Connect to Google BigQuery.
+
+    Args:
+        credentials: GBQ Credentials.
+
+    Returns:
+         con: database connection
+    """
+    client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+    con = dbapi.Connection(client)
     return con
 
 

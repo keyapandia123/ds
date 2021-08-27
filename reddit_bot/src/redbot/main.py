@@ -13,7 +13,7 @@ from redbot import inference
 
 LOG_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
 LOGFILE = os.path.expanduser('~/.redbot/log')
-REDDIT = praw.Reddit(**credentials.load_credentials())
+REDDIT = praw.Reddit(**credentials.load_reddit_credentials())
 DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
 SUB_NAME = 'politics'
 NEW_POST_LIMIT = 20
