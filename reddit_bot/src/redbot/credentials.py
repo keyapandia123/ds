@@ -32,11 +32,12 @@ def load_gcp_credentials(file_path=None):
         file_path: str. Path where GCP credentials are stored. If None, use GCP_CREDENTIALS_DEFAULT_PATH.
 
     Returns:
-        creds: dict. The credentials.
+        gbq_credentials: dict. The credentials.
     """
     if not file_path:
         file_path = GCP_CREDENTIALS_DEFAULT_PATH
-    file_path = os.path.expanduser(GCP_CREDENTIALS_DEFAULT_PATH)
-    credentials = service_account.Credentials.from_service_account_file(file_path, scopes=[
-            'https://www.googleapis.com/auth/cloud-platform'])
-    return credentials
+    file_path = os.path.expanduser(file_path)
+    gbq_credentials = service_account.Credentials.from_service_account_file(
+        file_path,
+        scopes=['https://www.googleapis.com/auth/cloud-platform'])
+    return gbq_credentials

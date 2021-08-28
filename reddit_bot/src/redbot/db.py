@@ -68,16 +68,56 @@ def connect_to_db(db_path, create_if_empty=False):
     return con
 
 
-def connect_to_gbq(credentials):
+def create_posts_table_gbq(client, gbq_credentials, create_if_empty=False):
+    """Create new posts table if it does not exist.
+
+    Args:
+        client: GBQ client
+        gbq_credentials: GBQ Credentials.
+        create_if_empty: bool. Create new posts table if True.
+    """
+    tables = client.list_tables('redbotdb')
+    found = False
+    for table in tables:
+        if table.table_id == 'posts':
+            found = True
+
+    if not found and not create_if_empty:
+        msg = 'Posts table not found'
+        raise DatabaseNotFoundError(msg)
+
+    if not found:
+        schema = [
+            bigquery.SchemaField('uuid', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('uid', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('url', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('title', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('score', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('upvote_ratio', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('highrank24', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('created_utc', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('time_highrank', 'TIMESTAMP', mode='NULLABLE'),
+            bigquery.SchemaField('subreddit', 'STRING', mode='NULLABLE'),
+            bigquery.SchemaField('prediction', 'FLOAT', mode='NULLABLE'),
+            bigquery.SchemaField('db_version', 'STRING', mode='NULLABLE')
+        ]
+
+        table = bigquery.Table(gbq_credentials.project_id + '.redbotdb.posts', schema=schema)
+        client.create_table(table)
+
+
+def connect_to_gbq(gbq_credentials, create_if_empty):
     """Connect to Google BigQuery.
 
     Args:
-        credentials: GBQ Credentials.
+        gbq_credentials: GBQ Credentials.
+        create_if_empty: bool. Create new posts table if True.
 
     Returns:
          con: database connection
     """
-    client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+    client = bigquery.Client(credentials=gbq_credentials, project=gbq_credentials.project_id)
+    create_posts_table_gbq(client, gbq_credentials, create_if_empty)
     con = dbapi.Connection(client)
     return con
 
