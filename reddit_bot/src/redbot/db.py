@@ -5,6 +5,7 @@ import sqlite3
 
 from google.cloud import bigquery
 from google.cloud.bigquery import dbapi
+import pandas as pd
 
 
 DB_VERSION = 'v2'
@@ -210,7 +211,8 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction, 
     """
     cursor = con.cursor()
     sql = """
-    INSERT INTO posts(uuid, uid, url, title, score, upvote_ratio, highrank24, created_utc, time_highrank, subreddit, prediction, db_version) 
+    INSERT INTO posts(uuid, uid, url, title, score, upvote_ratio, highrank24, created_utc, 
+    time_highrank, subreddit, prediction, db_version) 
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     cursor.execute(
@@ -245,3 +247,171 @@ def update_prediction(con, new_pred, uuid):
     """
     cursor.execute(sql, (int(new_pred), uuid))
     con.commit()
+
+
+def retrieve_posts_for_inference(con, current_time_utc):
+    """Retrieve posts ingested between 1 and 3 hours ago that have no predictions.
+
+    Args:
+        con: database connection.
+        current_time_utc: datetime. Current UTC time.
+
+    Returns:
+        raw_test_df: DataFrame. DataFrame containing raw attributes
+        (uuid, url, title, score, upvote_ratio) for posts ingested
+        between 1 and 3 hours ago.
+    """
+    sql = """
+    SELECT uuid, url, title, score, upvote_ratio FROM posts 
+    WHERE (prediction IS NULL) AND  
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 1.0) AND 
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 3.0)
+    """
+    raw_test_df = pd.read_sql(sql, con, params=[current_time_utc, current_time_utc])
+    return raw_test_df
+
+
+def retrieve_valid_posts_for_training(con, current_time_utc):
+    """Return a raw dataframe of all valid posts (created over 24 hours ago).
+
+    Args:
+       con: database connection.
+       current_time_utc: datetime. Current UTC time.
+
+    Returns:
+         raw_df: DataFrame. DataFrame containing raw attributes
+        (url, title, score, upvote_ratio, highrank24) for posts ingested
+        24 hours ago.
+    """
+    sql = """
+    SELECT url, title, score, upvote_ratio, highrank24 FROM posts 
+    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
+    """
+    raw_df = pd.read_sql(sql, con, params=[current_time_utc])
+    return raw_df
+
+
+def return_total_post_count_for_analysis(con):
+    cursor = con.cursor()
+    sql = """
+    SELECT COUNT(uuid) FROM posts
+    """
+    post_cnt_gen = cursor.execute(sql)
+    return list(post_cnt_gen)[0][0]
+
+
+def return_total_hot_post_count_for_analysis(con):
+    cursor = con.cursor()
+    sql = """
+    SELECT COUNT(uuid) FROM posts WHERE highrank24 IS NOT NULL"""
+    post_cnt_gen = cursor.execute(sql)
+    return list(post_cnt_gen)[0][0]
+
+
+def return_total_valid_post_count_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT COUNT(uuid) FROM posts 
+    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
+    """
+    post_cnt_gen = cursor.execute(sql, (current_time_utc,))
+    return list(post_cnt_gen)[0][0]
+
+
+def return_total_hot_valid_post_count_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT COUNT(uuid) FROM posts 
+    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24 AND highrank24 IS NOT NULL
+    """
+    post_cnt_gen = cursor.execute(sql, (current_time_utc,))
+    return list(post_cnt_gen)[0][0]
+
+
+def return_hot_post_scores_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT AVG(score), MIN(score), MAX(score)
+    FROM posts 
+    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    score_gen = cursor.execute(sql, (current_time_utc,))
+    return list(score_gen)
+
+
+def return_non_hot_post_scores_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT AVG(score), MIN(score), MAX(score)
+    FROM posts 
+    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    score_gen = cursor.execute(sql, (current_time_utc,))
+    return list(score_gen)
+
+
+def return_hot_post_titles_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT title
+    FROM posts 
+    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    title_gen = cursor.execute(sql, (current_time_utc,))
+    return list(title_gen)
+
+
+def return_non_hot_post_titles_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT title
+    FROM posts 
+    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    title_gen = cursor.execute(sql, (current_time_utc,))
+    return list(title_gen)
+
+
+def return_trending_post_titles_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT title
+    FROM posts 
+    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 24
+    """
+    title_gen = cursor.execute(sql, (current_time_utc,))
+    return list(title_gen)
+
+
+def return_hot_post_urls_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT url
+    FROM posts 
+    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    url_gen = cursor.execute(sql, (current_time_utc,))
+    return list(url_gen)
+
+
+def return_non_hot_post_urls_for_analysis(con, current_time_utc):
+    cursor = con.cursor()
+    sql = """
+    SELECT url
+    FROM posts 
+    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
+    """
+    url_gen = cursor.execute(sql, (current_time_utc,))
+    return list(url_gen)
+
+
+def retrieve_posts_older_than_window_for_analysis_of_inference(con, current_time_utc, win_hr):
+    sql = """
+    SELECT uuid, uid, highrank24, score, prediction FROM posts 
+    WHERE (prediction IS NOT NULL) AND 
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= ?) AND 
+    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= ?)
+    """
+    pred_df = pd.read_sql(sql, con, params=[current_time_utc, win_hr, current_time_utc, win_hr + 24.0])
+
+    return pred_df

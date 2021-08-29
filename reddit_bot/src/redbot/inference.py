@@ -62,18 +62,13 @@ def retrieve_hour_old_posts(con):
 
     Returns:
         raw_test_df: DataFrame. DataFrame containing raw attributes
-        (id, url, title, score, upvote_ratio) for posts ingested
+        (uuid, url, title, score, upvote_ratio) for posts ingested
         between 1 and 3 hours ago.
     """
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
-    sql = """
-    SELECT uuid, url, title, score, upvote_ratio FROM posts 
-    WHERE (prediction IS NULL) AND  
-    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 1.0) AND 
-    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 3.0)
-    """
-    raw_test_df = pd.read_sql(sql, con, params=[current_time_utc, current_time_utc])
+
+    raw_test_df = db.retrieve_posts_for_inference(con, current_time_utc)
 
     return raw_test_df
 

@@ -28,11 +28,8 @@ def preprocess_valid_data(con):
     """
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
-    sql = """
-    SELECT url, title, score, upvote_ratio, highrank24 FROM posts 
-    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
-    """
-    raw_df = pd.read_sql(sql, con, params=[current_time_utc])
+
+    raw_df = db.retrieve_valid_posts_for_training(con, current_time_utc)
 
     df = raw_df.copy()
     full_domain = []

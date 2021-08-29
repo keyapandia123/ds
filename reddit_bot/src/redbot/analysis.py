@@ -26,34 +26,14 @@ def return_post_counts(con):
         total_hot_valid_post_cnt: int. Number of total hot posts in the database that were created over 24 hours ago
 
     """
-    cursor = con.cursor()
-
-    sql1 = """
-    SELECT COUNT(uid) FROM posts
-    """
-    post_cnt_gen = cursor.execute(sql1)
-    total_post_cnt = list(post_cnt_gen)[0][0]
-
-    sql2 = """
-    SELECT COUNT(uid) FROM posts WHERE highrank24 IS NOT NULL"""
-    post_cnt_gen = cursor.execute(sql2)
-    total_hot_post_cnt = list(post_cnt_gen)[0][0]
+    total_post_cnt = db.return_total_post_count_for_analysis(con)
+    total_hot_post_cnt = db.return_total_hot_post_count_for_analysis(con)
 
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
-    sql3 = """
-    SELECT COUNT(uid) FROM posts 
-    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
-    """
-    post_cnt_gen = cursor.execute(sql3, (current_time_utc,))
-    total_valid_post_cnt = list(post_cnt_gen)[0][0]
 
-    sql4 = """
-    SELECT COUNT(uid) FROM posts 
-    WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24 AND highrank24 IS NOT NULL
-    """
-    post_cnt_gen = cursor.execute(sql4, (current_time_utc,))
-    total_hot_valid_post_cnt = list(post_cnt_gen)[0][0]
+    total_valid_post_cnt = db.return_total_valid_post_count_for_analysis(con, current_time_utc)
+    total_hot_valid_post_cnt = db.return_total_hot_valid_post_count_for_analysis(con, current_time_utc)
 
     print(total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt)
 
@@ -77,29 +57,15 @@ def return_scores(con):
         [mean_hot, min_hot, max_hot]: list. List of mean (average), minimum, and maximum scores of valid hot posts
         [mean_non_hot, min_non_hot, max_non_hot]: list. List of mean (average), minimum, and maximum scores of valid non-hot posts
     """
-    cursor = con.cursor()
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    sql1 = """
-    SELECT AVG(score), MIN(score), MAX(score)
-    FROM posts 
-    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    score_gen = cursor.execute(sql1, (current_time_utc,))
-    ll_score_gen = list(score_gen)
+    ll_score_gen = db.return_hot_post_scores_for_analysis(con, current_time_utc)
     mean_hot = ll_score_gen[0][0]
     min_hot = ll_score_gen[0][1]
     max_hot = ll_score_gen[0][2]
 
-    sql2 = """
-    SELECT AVG(score), MIN(score), MAX(score)
-    FROM posts 
-    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    score_gen = cursor.execute(sql2, (current_time_utc,))
-    ll_score_gen = list(score_gen)
+    ll_score_gen = db.return_non_hot_post_scores_for_analysis(con, current_time_utc)
     mean_non_hot = ll_score_gen[0][0]
     min_non_hot = ll_score_gen[0][1]
     max_non_hot = ll_score_gen[0][2]
@@ -119,38 +85,18 @@ def title_keywords(con):
     Args:
         con: database connection
     """
-    cursor = con.cursor()
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    sql1 = """
-    SELECT title
-    FROM posts 
-    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    title_gen = cursor.execute(sql1, (current_time_utc,))
-    ll_title_gen = list(title_gen)
+    ll_title_gen = db.return_hot_post_titles_for_analysis(con, current_time_utc)
     hot_titles = [elem[0] for elem in ll_title_gen]
     hot_labels = [1 for elem in ll_title_gen]
 
-    sql2 = """
-    SELECT title
-    FROM posts 
-    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    title_gen = cursor.execute(sql2, (current_time_utc,))
-    ll_title_gen = list(title_gen)
+    ll_title_gen = db.return_non_hot_post_titles_for_analysis(con, current_time_utc)
     non_hot_titles = [elem[0] for elem in ll_title_gen]
     non_hot_labels = [0 for elem in ll_title_gen]
 
-    sql3 = """
-    SELECT title
-    FROM posts 
-    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 24
-    """
-    title_gen = cursor.execute(sql3, (current_time_utc,))
-    ll_title_gen = list(title_gen)
+    ll_title_gen = db.return_trending_post_titles_for_analysis(con, current_time_utc)
     trending_titles = [elem[0] for elem in ll_title_gen]
 
     if not hot_titles or not non_hot_titles or not trending_titles:
@@ -223,28 +169,15 @@ def domains(con):
     Args:
         con: database connection
     """
-    cursor = con.cursor()
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    sql1 = """
-    SELECT url
-    FROM posts 
-    WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    url_gen = cursor.execute(sql1, (current_time_utc,))
-    ll_url_gen = list(url_gen)
+    ll_url_gen = db.return_hot_post_urls_for_analysis(con, current_time_utc)
     hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
-    hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www' else elem.split('.')[0] for elem in hot_urls]
+    hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
+                          else elem.split('.')[0] for elem in hot_urls]
 
-    sql2 = """
-    SELECT url
-    FROM posts 
-    WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
-    """
-    url_gen = cursor.execute(sql2, (current_time_utc,))
-    ll_url_gen = list(url_gen)
+    ll_url_gen = db.return_non_hot_post_urls_for_analysis(con, current_time_utc)
     non_hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
     non_hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
                               else elem.split('.')[0] for elem in non_hot_urls]
@@ -275,18 +208,10 @@ def domains(con):
 
 
 def calculate_recall(con, win_hr=24.0):
-
-
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    sql = """
-    SELECT uuid, uid, highrank24, score, prediction FROM posts 
-    WHERE (prediction IS NOT NULL) AND 
-    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= ?) AND 
-    ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= ?)
-    """
-    pred_df = pd.read_sql(sql, con, params=[current_time_utc, win_hr, current_time_utc, win_hr + 24.0])
+    pred_df = db.retrieve_posts_older_than_window_for_analysis_of_inference(con, current_time_utc, win_hr)
 
     hot_or_not = []
     for idx in pred_df.index:
