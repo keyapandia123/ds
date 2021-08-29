@@ -9,6 +9,9 @@ import pandas as pd
 
 
 DB_VERSION = 'v2'
+# Use "posts" when interfacing with SQLite and replace with "{gbq_credentials.project_id}.redbotdb.posts"
+# when interfacing with GBQ
+table_name = 'posts'
 
 
 class DatabaseNotFoundError(Exception):
@@ -133,8 +136,8 @@ def get_uids(con):
         uids: list of post ids.
     """
     cursor = con.cursor()
-    sql = """
-    SELECT uid FROM posts
+    sql = f"""
+    SELECT uid FROM {table_name}
     """
     uid_gen = cursor.execute(sql)
     return [elem[0] for elem in uid_gen]
@@ -151,8 +154,8 @@ def get_highrank(con, uid):
         high_rank: int. highest rank of the post as stored in the database.
     """
     cursor = con.cursor()
-    sql = """
-    SELECT highrank24 FROM posts WHERE uid=?
+    sql = f"""
+    SELECT highrank24 FROM {table_name} WHERE uid=?
     """
     high_rank_gen = cursor.execute(sql, (uid,))
     return next(high_rank_gen)[0]
@@ -168,8 +171,8 @@ def update_highrank(con, new_high_rank, new_time_highrank, uid):
         uid: str. The post id obtained from PRAW.
     """
     cursor = con.cursor()
-    sql = """
-    UPDATE posts SET highrank24=?, time_highrank=? WHERE uid=?
+    sql = f"""
+    UPDATE {table_name} SET highrank24=?, time_highrank=? WHERE uid=?
     """
     cursor.execute(sql, (int(new_high_rank), new_time_highrank, uid))
     con.commit()
@@ -184,8 +187,8 @@ def update_score(con, new_score, uid):
         uid: str. The post id obtained from PRAW.
     """
     cursor = con.cursor()
-    sql = """
-    UPDATE posts SET score=? WHERE uid=?
+    sql = f"""
+    UPDATE {table_name} SET score=? WHERE uid=?
     """
     cursor.execute(sql, (int(new_score), uid))
     con.commit()
@@ -210,8 +213,8 @@ def insert_new_post(con, post, high_rank, time_highrank, subreddit, prediction, 
         uuid: str. Globally unique id.
     """
     cursor = con.cursor()
-    sql = """
-    INSERT INTO posts(uuid, uid, url, title, score, upvote_ratio, highrank24, created_utc, 
+    sql = f"""
+    INSERT INTO {table_name}(uuid, uid, url, title, score, upvote_ratio, highrank24, created_utc, 
     time_highrank, subreddit, prediction, db_version) 
     VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
@@ -242,8 +245,8 @@ def update_prediction(con, new_pred, uuid):
         uuid: str. The post uid obtained from PRAW.
     """
     cursor = con.cursor()
-    sql = """
-    UPDATE posts SET prediction=? WHERE uuid=?
+    sql = f"""
+    UPDATE {table_name} SET prediction=? WHERE uuid=?
     """
     cursor.execute(sql, (int(new_pred), uuid))
     con.commit()
@@ -261,8 +264,8 @@ def retrieve_posts_for_inference(con, current_time_utc):
         (uuid, url, title, score, upvote_ratio) for posts ingested
         between 1 and 3 hours ago.
     """
-    sql = """
-    SELECT uuid, url, title, score, upvote_ratio FROM posts 
+    sql = f"""
+    SELECT uuid, url, title, score, upvote_ratio FROM {table_name} 
     WHERE (prediction IS NULL) AND  
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 1.0) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 3.0)
@@ -283,8 +286,8 @@ def retrieve_valid_posts_for_training(con, current_time_utc):
         (url, title, score, upvote_ratio, highrank24) for posts ingested
         24 hours ago.
     """
-    sql = """
-    SELECT url, title, score, upvote_ratio, highrank24 FROM posts 
+    sql = f"""
+    SELECT url, title, score, upvote_ratio, highrank24 FROM {table_name} 
     WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
     """
     raw_df = pd.read_sql(sql, con, params=[current_time_utc])
@@ -293,8 +296,8 @@ def retrieve_valid_posts_for_training(con, current_time_utc):
 
 def return_total_post_count_for_analysis(con):
     cursor = con.cursor()
-    sql = """
-    SELECT COUNT(uuid) FROM posts
+    sql = f"""
+    SELECT COUNT(uuid) FROM {table_name}
     """
     post_cnt_gen = cursor.execute(sql)
     return list(post_cnt_gen)[0][0]
@@ -302,16 +305,16 @@ def return_total_post_count_for_analysis(con):
 
 def return_total_hot_post_count_for_analysis(con):
     cursor = con.cursor()
-    sql = """
-    SELECT COUNT(uuid) FROM posts WHERE highrank24 IS NOT NULL"""
+    sql = f"""
+    SELECT COUNT(uuid) FROM {table_name} WHERE highrank24 IS NOT NULL"""
     post_cnt_gen = cursor.execute(sql)
     return list(post_cnt_gen)[0][0]
 
 
 def return_total_valid_post_count_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
-    SELECT COUNT(uuid) FROM posts 
+    sql = f"""
+    SELECT COUNT(uuid) FROM {table_name} 
     WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24.0
     """
     post_cnt_gen = cursor.execute(sql, (current_time_utc,))
@@ -320,8 +323,8 @@ def return_total_valid_post_count_for_analysis(con, current_time_utc):
 
 def return_total_hot_valid_post_count_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
-    SELECT COUNT(uuid) FROM posts 
+    sql = f"""
+    SELECT COUNT(uuid) FROM {table_name} 
     WHERE (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24 AND highrank24 IS NOT NULL
     """
     post_cnt_gen = cursor.execute(sql, (current_time_utc,))
@@ -330,9 +333,9 @@ def return_total_hot_valid_post_count_for_analysis(con, current_time_utc):
 
 def return_hot_post_scores_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT AVG(score), MIN(score), MAX(score)
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     score_gen = cursor.execute(sql, (current_time_utc,))
@@ -341,9 +344,9 @@ def return_hot_post_scores_for_analysis(con, current_time_utc):
 
 def return_non_hot_post_scores_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT AVG(score), MIN(score), MAX(score)
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     score_gen = cursor.execute(sql, (current_time_utc,))
@@ -352,9 +355,9 @@ def return_non_hot_post_scores_for_analysis(con, current_time_utc):
 
 def return_hot_post_titles_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT title
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     title_gen = cursor.execute(sql, (current_time_utc,))
@@ -363,9 +366,9 @@ def return_hot_post_titles_for_analysis(con, current_time_utc):
 
 def return_non_hot_post_titles_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT title
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     title_gen = cursor.execute(sql, (current_time_utc,))
@@ -374,9 +377,9 @@ def return_non_hot_post_titles_for_analysis(con, current_time_utc):
 
 def return_trending_post_titles_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT title
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= 24
     """
     title_gen = cursor.execute(sql, (current_time_utc,))
@@ -385,9 +388,9 @@ def return_trending_post_titles_for_analysis(con, current_time_utc):
 
 def return_hot_post_urls_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT url
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NOT NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     url_gen = cursor.execute(sql, (current_time_utc,))
@@ -396,9 +399,9 @@ def return_hot_post_urls_for_analysis(con, current_time_utc):
 
 def return_non_hot_post_urls_for_analysis(con, current_time_utc):
     cursor = con.cursor()
-    sql = """
+    sql = f"""
     SELECT url
-    FROM posts 
+    FROM {table_name} 
     WHERE highrank24 IS NULL AND (strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= 24
     """
     url_gen = cursor.execute(sql, (current_time_utc,))
@@ -406,8 +409,8 @@ def return_non_hot_post_urls_for_analysis(con, current_time_utc):
 
 
 def retrieve_posts_older_than_window_for_analysis_of_inference(con, current_time_utc, win_hr):
-    sql = """
-    SELECT uuid, uid, highrank24, score, prediction FROM posts 
+    sql = f"""
+    SELECT uuid, uid, highrank24, score, prediction FROM {table_name} 
     WHERE (prediction IS NOT NULL) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 >= ?) AND 
     ((strftime('%s', ?) - strftime('%s', [created_utc])) / 3600.0 <= ?)
