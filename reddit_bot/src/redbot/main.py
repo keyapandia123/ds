@@ -15,7 +15,6 @@ from redbot import inference
 LOG_FORMATTER = logging.Formatter('%(asctime)s %(levelname)s %(funcName)s(%(lineno)d) %(message)s')
 LOGFILE = os.path.expanduser('~/.redbot/log')
 REDDIT = praw.Reddit(**credentials.load_reddit_credentials())
-DATABASE_DEFAULT_PATH = '~/.redbot/redbotdb.sqlite'
 SUB_NAME = 'politics'
 NEW_POST_LIMIT = 20
 HOT_POST_LIMIT = 10
@@ -40,7 +39,7 @@ def setup_logging(logFile, log_formatter):
 _log = setup_logging(LOGFILE, LOG_FORMATTER)
 
 
-def ingest_new_posts(limit, sub_name):
+def ingest_new_posts(limit, sub_name, con):
     """Add new posts to the database as they are created in Reddit.
 
     Ingest predefined number of new posts from the specified subreddit.
@@ -53,10 +52,10 @@ def ingest_new_posts(limit, sub_name):
     Args:
         limit: int. predefined number of new posts to ingest everytime this function is called
         sub_name: str. name of subreddit from which to ingest new posts
+        con: database connection.
     """
     subreddit = REDDIT.subreddit(sub_name)
     posts = subreddit.new(limit=limit)
-    con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=True)
     uids = db.get_uids(con)
     for num, p in enumerate(posts):
         now = time.time()
@@ -80,7 +79,7 @@ def ingest_new_posts(limit, sub_name):
     con.commit()
 
 
-def check_hot_posts(limit, sub_name):
+def check_hot_posts(limit, sub_name, con):
     """Compare ingested posts against top hot posts in Reddit.
 
     Check if posts ingested into the table have appeared among a predefined number of
@@ -95,10 +94,10 @@ def check_hot_posts(limit, sub_name):
     Args:
         limit: int. predefined number of top hot posts to fetch from Reddit.
         sub_name: str. Subbreddit from which to fetch hot posts.
+        con: database connection.
     """
     subreddit = REDDIT.subreddit(sub_name)
     posts = subreddit.hot(limit=limit)
-    con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=True)
     uids = db.get_uids(con)
     for num, p in enumerate(posts):
         if not p.stickied:
@@ -123,11 +122,13 @@ def main():
     and check if any of the new ingested posts are present in the top
     hot posts for that subreddit within 24 hours of the post's creation.
     """
+    gbq_credentials = credentials.load_gcp_credentials()
+    db.table_name = f'{gbq_credentials.project_id}.redbotdb.posts'
+    con = db.connect_to_gbq(gbq_credentials, create_if_empty=True)
     while True:
-        ingest_new_posts(NEW_POST_LIMIT, SUB_NAME)
+        ingest_new_posts(NEW_POST_LIMIT, SUB_NAME, con)
         time.sleep(1)
-        check_hot_posts(HOT_POST_LIMIT, SUB_NAME)
-        con = db.connect_to_db(DATABASE_DEFAULT_PATH, create_if_empty=False)
+        check_hot_posts(HOT_POST_LIMIT, SUB_NAME, con)
         inference.run_inference(con, new_model=False, to_save=False)
         time.sleep(SLEEP_S)
 
