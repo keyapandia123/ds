@@ -213,7 +213,9 @@ def test_analyze():
 
 
 def test_run_analysis():
-    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
+    gbq_credentials = credentials.load_gcp_credentials()
+    db.table_name = f'{gbq_credentials.project_id}.redbotdb.posts'
+    con = db.connect_to_gbq(gbq_credentials, create_if_empty=False)
 
     total_post_cnt, total_hot_post_cnt, total_valid_post_cnt, total_hot_valid_post_cnt = analysis.return_post_counts(con)
 
@@ -225,10 +227,14 @@ def test_run_analysis():
 
 
 def test_run_train():
-    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
+    gbq_credentials = credentials.load_gcp_credentials()
+    db.table_name = f'{gbq_credentials.project_id}.redbotdb.posts'
+    con = db.connect_to_gbq(gbq_credentials, create_if_empty=False)
     train.run_and_evaluate_training(con)
 
 
 def test_analyze_inference():
-    con = db.connect_to_db(main.DATABASE_DEFAULT_PATH)
-    analysis.calculate_recall(con, win_hr=5.0)
+    gbq_credentials = credentials.load_gcp_credentials()
+    db.table_name = f'{gbq_credentials.project_id}.redbotdb.posts'
+    con = db.connect_to_gbq(gbq_credentials, create_if_empty=False)
+    _, r, a = analysis.calculate_recall(con, win_hr=12.0)

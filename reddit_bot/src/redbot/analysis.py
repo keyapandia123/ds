@@ -60,15 +60,15 @@ def return_scores(con):
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    ll_score_gen = db.return_hot_post_scores_for_analysis(con, current_time_utc)
-    mean_hot = ll_score_gen[0][0]
-    min_hot = ll_score_gen[0][1]
-    max_hot = ll_score_gen[0][2]
+    ll_score = db.return_hot_post_scores_for_analysis(con, current_time_utc)
+    mean_hot = ll_score[0]
+    min_hot = ll_score[1]
+    max_hot = ll_score[2]
 
-    ll_score_gen = db.return_non_hot_post_scores_for_analysis(con, current_time_utc)
-    mean_non_hot = ll_score_gen[0][0]
-    min_non_hot = ll_score_gen[0][1]
-    max_non_hot = ll_score_gen[0][2]
+    ll_score = db.return_non_hot_post_scores_for_analysis(con, current_time_utc)
+    mean_non_hot = ll_score[0]
+    min_non_hot = ll_score[1]
+    max_non_hot = ll_score[2]
 
     print([mean_hot, min_hot, max_hot], [mean_non_hot, min_non_hot, max_non_hot])
 
@@ -88,16 +88,13 @@ def title_keywords(con):
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    ll_title_gen = db.return_hot_post_titles_for_analysis(con, current_time_utc)
-    hot_titles = [elem[0] for elem in ll_title_gen]
-    hot_labels = [1 for elem in ll_title_gen]
+    hot_titles = db.return_hot_post_titles_for_analysis(con, current_time_utc)
+    hot_labels = [1 for elem in hot_titles]
 
-    ll_title_gen = db.return_non_hot_post_titles_for_analysis(con, current_time_utc)
-    non_hot_titles = [elem[0] for elem in ll_title_gen]
-    non_hot_labels = [0 for elem in ll_title_gen]
+    non_hot_titles = db.return_non_hot_post_titles_for_analysis(con, current_time_utc)
+    non_hot_labels = [0 for elem in non_hot_titles]
 
-    ll_title_gen = db.return_trending_post_titles_for_analysis(con, current_time_utc)
-    trending_titles = [elem[0] for elem in ll_title_gen]
+    trending_titles = db.return_trending_post_titles_for_analysis(con, current_time_utc)
 
     if not hot_titles or not non_hot_titles or not trending_titles:
         return
@@ -172,13 +169,13 @@ def domains(con):
     current_time = time.time()
     current_time_utc = datetime.utcfromtimestamp(current_time)
 
-    ll_url_gen = db.return_hot_post_urls_for_analysis(con, current_time_utc)
-    hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
+    hot_urls_full = db.return_hot_post_urls_for_analysis(con, current_time_utc)
+    hot_urls = [urlparse(elem)[1] for elem in hot_urls_full]
     hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
                           else elem.split('.')[0] for elem in hot_urls]
 
-    ll_url_gen = db.return_non_hot_post_urls_for_analysis(con, current_time_utc)
-    non_hot_urls = [urlparse(elem[0])[1] for elem in ll_url_gen]
+    non_hot_urls_full = db.return_non_hot_post_urls_for_analysis(con, current_time_utc)
+    non_hot_urls = [urlparse(elem)[1] for elem in non_hot_urls_full]
     non_hot_urls_segmented = [elem.split('.')[1] if elem.split('.')[0] == 'www'
                               else elem.split('.')[0] for elem in non_hot_urls]
 
@@ -228,6 +225,28 @@ def calculate_recall(con, win_hr=24.0):
     print("Time :", current_time_utc)
     print("Recall :", recall)
     print("Accuracy :", accuracy)
-    print(pred_df[(pred_df['hot_or_not'] == 1) | (pred_df['prediction'] == 1)])
+    #print(pred_df[(pred_df['hot_or_not'] == 1) | (pred_df['prediction'] == 1)])
 
     return pred_df, recall, accuracy
+
+
+def plot_accuracy_recall(con):
+    recalls = []
+    accuracies = []
+    lapses = [12 * 20, 12 * 19, 12 * 18, 12 * 17, 12 * 16, 12 * 15, 12 * 14, 12 * 13, 12 * 12, 12 * 11, 12 * 10, 12 * 9,
+              12 * 8, 12 * 7, 12 * 6, 12 * 5, 12 * 4, 12 * 3, 12 * 2, 12 * 1]
+    for lapse in lapses:
+        _, r, a = calculate_recall(con, win_hr=lapse)
+        recalls.append(r)
+        accuracies.append(a)
+
+    print(recalls)
+    print(accuracies)
+
+    fig = plt.figure(figsize=(15, 8))
+    plt.plot(np.array(lapses) / 24, recalls)
+    plt.plot(np.array(lapses) / 24, accuracies)
+    plt.xlabel('Time (days)')
+    plt.title('Recall-Accuracy', fontsize=70)
+    plt.legend(['Recall', 'Accuracy'])
+    plt.savefig(os.path.expanduser("~/ml/reddit_bot/recall_accuracy.png"))
