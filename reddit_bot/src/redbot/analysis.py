@@ -249,4 +249,7 @@ def plot_accuracy_recall(con):
     plt.xlabel('Time (days)')
     plt.title('Recall-Accuracy', fontsize=70)
     plt.legend(['Recall', 'Accuracy'])
+
+    if not os.path.exists(os.path.expanduser("~/ml/reddit_bot")):
+        os.makedirs(os.path.expanduser("~/ml/reddit_bot"))
     plt.savefig(os.path.expanduser("~/ml/reddit_bot/recall_accuracy.png"))

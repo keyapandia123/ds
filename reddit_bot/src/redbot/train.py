@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 
 from lightgbm import LGBMClassifier
 import numpy as np
-import pandas as pd
 from sklearn import compose, feature_extraction, linear_model, metrics, model_selection
 from xgboost import XGBClassifier
 

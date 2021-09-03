@@ -12,6 +12,9 @@ from redbot import db
 from redbot import train
 
 
+MODEL_ROOT = os.path.expanduser('~/.redbot')
+
+
 def create_transformer_and_model(df, to_save=False):
     """Generate column transformer and classifier/estimator object fitted to all of the valid data.
 
@@ -43,10 +46,10 @@ def create_transformer_and_model(df, to_save=False):
     clf.fit(x_train_transformed, y_train)
 
     if to_save:
-        if not os.path.exists(os.path.expanduser("~/github/ds/reddit_bot/model_objects")):
-            os.makedirs(os.path.expanduser("~/github/ds/reddit_bot/model_objects"))
-        dump(ct, open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/ct.pkl"), "wb"))
-        dump(clf, open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/model.pkl"), "wb"))
+        if not os.path.exists(MODEL_ROOT):
+            os.makedirs(MODEL_ROOT)
+        dump(ct, open(os.path.join(MODEL_ROOT, 'ct.pkl'), 'wb'))
+        dump(clf, open(os.path.join(MODEL_ROOT, 'model.pkl'), 'wb'))
 
     return ct, clf
 
@@ -143,8 +146,8 @@ def run_inference(con, new_model=True, to_save=False):
         df = train.preprocess_valid_data()
         ct, clf = create_transformer_and_model(df, to_save)
     else:
-        clf = load(open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/model.pkl"), 'rb'))
-        ct = load(open(os.path.expanduser("~/github/ds/reddit_bot/model_objects/ct.pkl"), 'rb'))
+        clf = load(open(os.path.join(MODEL_ROOT, 'model.pkl'), 'rb'))
+        ct = load(open(os.path.join(MODEL_ROOT, 'ct.pkl'), 'rb'))
 
     raw_test_df = retrieve_hour_old_posts(con)
 
